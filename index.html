@@ -1,0 +1,970 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>Safari</title>
+<link rel="apple-touch-icon" href="safari-icon.png">
+<style>
+:root{
+  --orange:#f38f1a;
+  --hair:#e9e9ee;
+  --muted:#6b6b6b;
+  --chip:#f4f4f6;
+  --shadow:0 12px 26px rgba(0,0,0,.12);
+}
+
+*{box-sizing:border-box;}
+html, body{
+  width:100%;
+  height:100%;
+  overflow-x:hidden;
+}
+body{
+  margin:0;
+  font-family:-apple-system,BlinkMacSystemFont,"Helvetica Neue",Arial,sans-serif;
+  background:#fff;
+  overflow:hidden;
+}
+.page{ overflow-x:hidden; }
+
+.addressWrap{ min-width:0; }
+.addrPill{ min-width:0; }
+.addrInput{ min-width:0; }
+.suggestText{ min-width:0; }
+
+/* ===== TOP SAFARI BAR ===== */
+.safariTop{
+  position:fixed;
+  top:0; left:0; right:0;
+  padding: calc(10px + env(safe-area-inset-top)) 12px 10px;
+  background: rgba(255,255,255,.92);
+  backdrop-filter: blur(20px);
+  border-bottom:1px solid var(--hair);
+  z-index:50;
+}
+
+.addressWrap{
+  display:flex;
+  gap:10px;
+  align-items:center;
+}
+
+.addrPill{
+  flex:1;
+  display:flex;
+  align-items:center;
+  gap:8px;
+  background:#f2f2f7;
+  border-radius:14px;
+  padding:10px 10px;
+  border:1px solid #ddd;
+  transition: box-shadow .18s ease, border-color .18s ease, transform .18s ease;
+}
+
+.addrPill.focused{
+  border-color: rgba(0,122,255,.35);
+  box-shadow: 0 0 0 3px rgba(0,122,255,.14);
+  transform: translateY(-1px);
+}
+
+.icon{
+  width:18px;
+  height:18px;
+  stroke:#1c1c1e;
+  stroke-width:2;
+  fill:none;
+  opacity:.85;
+  flex:0 0 auto;
+}
+
+.addrInput{
+  border:none;
+  background:transparent;
+  font-size:16px;          /* ✅ clé anti-zoom iOS */
+  line-height:20px;
+  width:100%;
+  outline:none;
+  color:#111;
+  -webkit-text-size-adjust:100%;
+}
+
+/* “…” outside the input (Safari action) */
+.moreBtnOut{
+  width:34px;
+  height:34px;
+  display:grid;
+  place-items:center;
+  border-radius:12px;
+  border:1px solid #ddd;
+  background:rgba(255,255,255,.75);
+  flex:0 0 auto;
+}
+.moreBtnOut:active{opacity:.6;}
+.dots{ width:16px;height:16px; }
+.dots circle{ fill:#111; opacity:.75; }
+
+/* loader */
+.loader{
+  height:2px;
+  width:0%;
+  background:var(--orange);
+  transition:width .45s ease;
+}
+
+/* ===== SUGGESTION DROPDOWN (animated) ===== */
+.suggestWrap{
+  position:absolute;
+  left:12px;
+  right:12px;
+  top: calc(56px + env(safe-area-inset-top));
+  background: rgba(255,255,255,.96);
+  backdrop-filter: blur(18px);
+  border:1px solid var(--hair);
+  border-radius:14px;
+  box-shadow: 0 14px 30px rgba(0,0,0,.12);
+  overflow:hidden;
+
+  opacity:0;
+  transform: translateY(-6px);
+  pointer-events:none;
+  transition: opacity .18s ease, transform .18s ease;
+}
+
+.suggestWrap.show{
+  opacity:1;
+  transform: translateY(0);
+  pointer-events:auto;
+}
+
+.suggestItem{
+  display:flex;
+  align-items:center;
+  gap:10px;
+  padding:12px 12px;
+  cursor:pointer;
+}
+
+.suggestItem:active{ background:#f2f2f7; }
+
+.suggestIcon{
+  width:22px;
+  height:22px;
+  border-radius:7px;
+  background:#f2f2f7;
+  display:grid;
+  place-items:center;
+  border:1px solid #e2e2e7;
+  flex:0 0 auto;
+  font-size:12px;
+  color:#333;
+  font-weight:800;
+}
+
+.suggestText{ display:flex; flex-direction:column; line-height:1.2; }
+.suggestTitle{ font-size:14px; font-weight:800; color:#111; }
+.suggestUrl{ font-size:12.5px; color:var(--muted); margin-top:2px; }
+
+/* ===== CONTENT / PAGES ===== */
+.content{
+  position:fixed;
+  left:0; right:0;
+  top: calc(74px + env(safe-area-inset-top));
+  bottom: calc(58px + env(safe-area-inset-bottom));
+  overflow:hidden;
+}
+
+.page{
+  position:absolute;
+  inset:0;
+  overflow-y:auto;
+  -webkit-overflow-scrolling:touch;
+  background:#fff;
+}
+
+.page.hidden{
+  opacity:0;
+  pointer-events:none;
+}
+
+/* ===== SEARCH (NEUTRE) ===== */
+.searchHint{
+  padding:90px 18px 0;
+  text-align:center;
+  color:#222;
+}
+
+.searchBoxFake{
+  width:86%;
+  max-width:520px;
+  margin:18px auto 0;
+  border-radius:24px;
+  border:1px solid #dadce0;
+  padding:14px 18px;
+  font-size:16px;
+  color:#888;
+  background:#fff;
+}
+
+/* =========================
+   ONG BANNER — using C
+   ========================= */
+.ongBanner{
+  background:var(--orange);
+  padding:30px 18px;
+  display:flex;
+  align-items:center;
+  justify-content:flex-start;
+  box-shadow: var(--shadow);
+  position:relative;
+  overflow:hidden;
+}
+
+/* Logo (header) */
+.ongBanner .logoWrap{
+  width:180px;
+  height:84px;
+  display:flex;
+  align-items:center;
+  justify-content:flex-start;
+  position:relative;
+  z-index:2;
+}
+
+.ongBanner img{
+  width:100%;
+  height:100%;
+  object-fit:contain;
+  display:block;
+}
+
+/* Variant C: “blob” + pointillés discrets à droite */
+.ongBanner::after{
+  content:"";
+  position:absolute;
+  inset:0;
+  background:
+    radial-gradient(320px 200px at 92% 40%, rgba(255,255,255,.20), rgba(255,255,255,0) 65%),
+    radial-gradient(380px 260px at 86% 95%, rgba(0,0,0,.10), rgba(0,0,0,0) 70%),
+    radial-gradient(circle, rgba(255,255,255,.18) 1.2px, rgba(255,255,255,0) 1.2px);
+  background-size: auto, auto, 14px 14px;
+  opacity:.75;
+  pointer-events:none;
+  -webkit-mask-image: linear-gradient(90deg, transparent 0%, rgba(0,0,0,1) 42%, rgba(0,0,0,1) 100%);
+          mask-image: linear-gradient(90deg, transparent 0%, rgba(0,0,0,1) 42%, rgba(0,0,0,1) 100%);
+}
+
+/* ===== ONG HOME ===== */
+.siteNav{
+  display:flex;
+  gap:10px;
+  padding:14px 18px;
+  flex-wrap:wrap;
+  border-bottom:1px solid var(--hair);
+}
+
+.navChip{
+  background:var(--chip);
+  border-radius:999px;
+  padding:8px 12px;
+  font-weight:650;
+  font-size:13px;
+  color:#111;
+}
+
+.navChip.active{
+  background:rgba(243,143,26,.14);
+  border:1px solid rgba(243,143,26,.35);
+}
+
+.sectionTitle{
+  padding:16px 18px 0;
+  font-weight:900;
+  letter-spacing:.2px;
+}
+
+.card{
+  margin:14px 18px;
+  border:1px solid var(--hair);
+  border-radius:16px;
+  padding:14px;
+  display:flex;
+  gap:12px;
+  align-items:flex-start;
+  background:#fff;
+}
+
+.card:active{ background:#f7f7fb; }
+
+.thumb{
+  width:76px;
+  height:76px;
+  border-radius:12px;
+  background:linear-gradient(135deg, rgba(243,143,26,.22), rgba(0,0,0,.08));
+  background-size:cover;
+  background-position:center;
+  flex-shrink:0;
+  border:1px solid rgba(0,0,0,.06);
+}
+
+.cardTitle{
+  font-weight:900;
+  font-size:16px;
+  line-height:1.2;
+}
+
+.metaLine{
+  margin-top:6px;
+  color:var(--muted);
+  font-size:12.5px;
+  line-height:1.3;
+}
+
+/* ===== PAGINATION (fake) ===== */
+.pagination{
+  margin:18px 18px 6px;
+  padding:12px 12px;
+  border:1px solid var(--hair);
+  border-radius:16px;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  gap:10px;
+  background:#fff;
+}
+
+.pBtn{
+  width:34px;
+  height:34px;
+  border-radius:12px;
+  border:1px solid var(--hair);
+  display:grid;
+  place-items:center;
+  font-size:18px;
+  color:#222;
+  background:#f7f7fb;
+  user-select:none;
+}
+
+.pNum{
+  width:34px;
+  height:34px;
+  border-radius:12px;
+  border:1px solid var(--hair);
+  display:grid;
+  place-items:center;
+  font-size:14px;
+  font-weight:800;
+  color:#222;
+  background:#fff;
+  user-select:none;
+}
+
+.pNum.active{
+  background:rgba(243,143,26,.14);
+  border-color: rgba(243,143,26,.35);
+}
+
+.pEll{
+  color:var(--muted);
+  font-weight:800;
+  padding:0 2px;
+}
+
+/* ===== FOOTER ONG (reworked) ===== */
+.siteFooter{
+  margin-top:12px;
+  padding:18px;
+  border-top:1px solid var(--hair);
+  background:#fff;
+}
+
+.footerRow{
+  display:flex;
+  align-items:flex-start;
+  justify-content:space-between;
+  gap:14px;
+}
+
+.footerBrand{
+  display:flex;
+  align-items:flex-start;
+  justify-content:flex-start;
+}
+
+.footerBrand img{
+  height:60px;
+  width:auto;
+  display:block;
+}
+
+.footerLinks{
+  display:flex;
+  flex-wrap:wrap;
+  justify-content:flex-end;
+  gap:12px 16px;
+  text-align:right;
+  padding-top:6px;
+}
+
+.footerLink{
+  font-size:13px;
+  color:#333;
+  font-weight:650;
+  opacity:.9;
+  user-select:none;
+}
+.footerLink:active{ opacity:.6; }
+
+/* copyright below links */
+.footerCopy{
+  margin-top:10px;
+  font-size:12px;
+  color:var(--muted);
+  line-height:1.35;
+  text-align:right;
+}
+
+/* ===== ARTICLE ===== */
+.articleHero{
+  width:100%;
+  height:200px;
+  background:linear-gradient(135deg, rgba(243,143,26,.22), rgba(0,0,0,.08));
+  background-size:cover;
+  background-position:center;
+  border-bottom:1px solid var(--hair);
+}
+
+.articleTop{
+  padding:16px 18px;
+  border-bottom:1px solid var(--hair);
+}
+
+.breadcrumb{
+  color:#007aff;
+  font-weight:750;
+  cursor:pointer;
+  user-select:none;
+}
+
+.articleTop h2{
+  margin:10px 0 6px;
+  font-size:20px;
+  line-height:1.15;
+}
+
+/* Badge “Enquête” */
+.metaBadge{
+  display:inline-block;
+  margin-top:8px;
+  padding:6px 10px;
+  border-radius:999px;
+  font-size:12.5px;
+  font-weight:800;
+  background:rgba(243,143,26,.14);
+  border:1px solid rgba(243,143,26,.35);
+  color:#7a3e00;
+}
+
+/* “Publié : …” */
+.publishLine{
+  margin-top:6px;
+  font-size:13px;
+  color:var(--muted);
+}
+
+/* Séparateur fin cinéma-friendly */
+.articleSep{
+  margin-top:12px;
+  height:1px;
+  background:linear-gradient(90deg, rgba(0,0,0,0), rgba(0,0,0,.10), rgba(0,0,0,0));
+}
+
+.articleBody{
+  padding:18px;
+  font-size:16px;
+  line-height:1.55;
+}
+
+/* inline article images */
+.articleImg{
+  width:100%;
+  height:auto;
+  border-radius:14px;
+  margin:14px 0 8px;
+  border:1px solid rgba(0,0,0,.08);
+}
+.caption{
+  font-size:12.5px;
+  color:var(--muted);
+  margin-bottom:14px;
+}
+
+.callout{
+  margin:16px 0;
+  padding:12px 12px 12px 14px;
+  background:rgba(243,143,26,.10);
+  border-left:4px solid var(--orange);
+  border-radius:14px;
+}
+
+.callout strong{ display:block; margin-bottom:6px; }
+
+/* Meta block at end (now positioned above donation) */
+.endMeta{
+  margin-top:18px;
+  padding:12px 12px;
+  border:1px solid var(--hair);
+  border-radius:14px;
+  background:#fff;
+}
+
+.endMetaTitle{
+  font-weight:900;
+  font-size:13px;
+  margin-bottom:8px;
+}
+
+.endMetaLine{
+  font-size:12.5px;
+  color:var(--muted);
+  line-height:1.45;
+}
+
+/* Donation */
+.donation{
+  margin-top:16px; /* slightly tighter since meta is above */
+  border:1px solid var(--hair);
+  border-radius:16px;
+  padding:16px;
+  background:#fafafa;
+}
+
+.fakeInput{
+  margin-top:10px;
+  border:1px solid #ddd;
+  border-radius:10px;
+  padding:10px 12px;
+  color:#9a9aa0;
+  background:#fff;
+}
+
+/* ===== BOTTOM SAFARI BAR ===== */
+.safariBottom{
+  position:fixed;
+  bottom:0;
+  left:0;
+  right:0;
+  padding:10px 16px calc(10px + env(safe-area-inset-bottom));
+  background: rgba(255,255,255,.92);
+  backdrop-filter: blur(20px);
+  border-top:1px solid var(--hair);
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  gap:12px;
+  z-index:60;
+}
+
+.bbtn{
+  width:36px;
+  height:32px;
+  display:grid;
+  place-items:center;
+  font-size:22px;
+  user-select:none;
+}
+
+.bbtn:active{ opacity:.55; }
+.bbtn.disabled{opacity:.25;}
+
+.homePill{
+  flex:1;
+  height:4px;
+  max-width:120px;
+  margin:0 auto;
+  background:#0002;
+  border-radius:999px;
+}
+</style>
+</head>
+
+<body>
+
+<div class="safariTop" id="topBar">
+  <div class="addressWrap">
+    <div class="addrPill" id="addrPill">
+      <svg class="icon" viewBox="0 0 24 24" aria-hidden="true">
+        <path d="M7.5 10.5V8.5a4.5 4.5 0 0 1 9 0v2"></path>
+        <path d="M6.5 10.5h11v10h-11z"></path>
+      </svg>
+      <input id="addr" class="addrInput" placeholder="Rechercher ou saisir une adresse" autocomplete="off">
+    </div>
+
+    <div id="moreAction" class="moreBtnOut" aria-label="Plus d’options">
+      <svg class="dots" viewBox="0 0 24 24">
+        <circle cx="7" cy="12" r="1.6"></circle>
+        <circle cx="12" cy="12" r="1.6"></circle>
+        <circle cx="17" cy="12" r="1.6"></circle>
+      </svg>
+    </div>
+  </div>
+
+  <div id="loader" class="loader"></div>
+
+  <div id="suggestWrap" class="suggestWrap">
+    <div id="suggestItem" class="suggestItem">
+      <div class="suggestIcon">⟲</div>
+      <div class="suggestText">
+        <div class="suggestTitle">Collectif Horizon 360</div>
+        <div class="suggestUrl">www.collectif-horizon360.com</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="content">
+
+  <div id="pageSearch" class="page">
+    <div class="searchHint">
+      <div style="font-weight:900;font-size:22px;margin-bottom:6px;">Recherche</div>
+      <div style="color:var(--muted);font-size:14px;line-height:1.4;">
+        Saisissez une requête dans la barre d’adresse.
+      </div>
+      <div class="searchBoxFake">Rechercher sur le Web</div>
+    </div>
+  </div>
+
+  <div id="pageHome" class="page hidden">
+    <div class="ongBanner">
+      <div class="logoWrap">
+        <img src="chlogo-blanc.png" alt="Logo ONG">
+      </div>
+    </div>
+
+    <div class="siteNav">
+      <div class="navChip active">Actualités</div>
+      <div class="navChip">Enquêtes</div>
+      <div class="navChip">Rapports</div>
+      <div class="navChip">À propos</div>
+    </div>
+
+    <div class="sectionTitle">À la une</div>
+
+    <div class="card">
+      <div class="thumb" style="background-image:url('thumb-01.jpg');"></div>
+      <div>
+        <div class="cardTitle">RDC : hausse des déplacements de population dans l’est</div>
+        <div class="metaLine">Actualités • 07 janv. 2026 • 2 min</div>
+      </div>
+    </div>
+
+    <div class="card" onclick="openArticle()" role="button">
+      <div class="thumb" style="background-image:url('thumb-varenne.jpg');"></div>
+      <div>
+        <div class="cardTitle">Affaire Varenne : des sous-traitants de sécurité au cœur des soupçons</div>
+        <div class="metaLine">Enquête • 08 janv. 2026 • 5 min</div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="thumb" style="background-image:url('thumb-02.jpg');"></div>
+      <div>
+        <div class="cardTitle">Sociétés écrans : comprendre les signaux d’alerte</div>
+        <div class="metaLine">Rapports • 03 janv. 2026 • 4 min</div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="thumb" style="background-image:url('thumb-03.jpg');"></div>
+      <div>
+        <div class="cardTitle">Rapport 2025 : violence armée et économie extractive</div>
+        <div class="metaLine">Rapport • 18 déc. 2025 • 8 min</div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="thumb" style="background-image:url('thumb-04.jpg');"></div>
+      <div>
+        <div class="cardTitle">Note de contexte : procès et procédures transnationales</div>
+        <div class="metaLine">Actualités • 12 déc. 2025 • 3 min</div>
+      </div>
+    </div>
+
+    <!-- ✅ Fake pagination ONLY on home -->
+    <div class="pagination" aria-label="Pagination (factice)">
+      <div class="pBtn">‹</div>
+      <div class="pNum active">1</div>
+      <div class="pNum">2</div>
+      <div class="pNum">3</div>
+      <div class="pEll">…</div>
+      <div class="pNum">8</div>
+      <div class="pBtn">›</div>
+    </div>
+
+    <div class="siteFooter">
+      <div class="footerRow">
+        <div class="footerBrand">
+          <img src="chlogo-base.png" alt="Logo ONG">
+        </div>
+        <div>
+          <div class="footerLinks" aria-label="Liens du site">
+            <div class="footerLink">Mentions légales</div>
+            <div class="footerLink">Contact</div>
+            <div class="footerLink">Presse</div>
+            <div class="footerLink">Faire un don</div>
+          </div>
+          <div class="footerCopy">© 2026 Collectif Horizon 360</div>
+        </div>
+      </div>
+    </div>
+
+    <div style="height:22px;"></div>
+  </div>
+
+  <div id="pageArticle" class="page hidden">
+    <div class="ongBanner">
+      <div class="logoWrap">
+        <img src="chlogo-blanc.png" alt="Logo ONG">
+      </div>
+    </div>
+
+    <div class="articleHero" id="articleHero"></div>
+
+    <div class="articleTop">
+      <div class="breadcrumb" onclick="goBack()">‹ Actualités</div>
+
+      <h2>Affaire Varenne : éléments de contexte et points de vigilance</h2>
+
+      <!-- ✅ Enquête badge under title -->
+      <div class="metaBadge">Enquête</div>
+
+      <!-- ✅ Published line under badge -->
+      <div class="publishLine">Publié : 08 janv. 2026</div>
+
+      <!-- ✅ Separator -->
+      <div class="articleSep"></div>
+    </div>
+
+    <div class="articleBody">
+      <p><strong>KANTALABA ⎥ RDC</strong> Le Collectif Horizon 360 publie une note de synthèse sur des contrats de sécurisation opérés dans une zone instable, et sur les risques de dérives liés à la sous-traitance en cascade.</p>
+
+      <p>Selon plusieurs éléments recueillis par l’ONG, des prestataires et intermédiaires auraient été mobilisés pour protéger des intérêts industriels autour de sites d’exploitation. Dans ce contexte, des groupes armés non étatiques pourraient avoir été favorisés de manière indirecte via des circuits de paiement difficiles à documenter.</p>
+
+      <img src="article-01.jpg" class="articleImg" alt="">
+      <div class="caption">Le village de Kantalaba sous l'emprise des flammes. © Collectif Horizon 360</div>
+
+      <div class="callout">
+        <strong>À retenir</strong>
+        La note ne conclut pas à un lien direct, mais relève des <em>indices</em> : sous-traitance en cascade, sociétés écrans, paiements fractionnés, clauses de confidentialité et absence de contrôle renforcé sur certains partenaires.
+      </div>
+
+      <p>Une procédure locale examine des faits de violences commises à proximité d’une concession minière. Les autorités congolaises instruisent le dossier et auditionnent plusieurs personnes, tandis que des vérifications financières se poursuivent sur d’éventuelles ramifications internationales.</p>
+
+      <img src="article-02.jpg" class="articleImg" alt="">
+      <div class="caption">Zone d’exploitation Minière proche de Kantalaba. © Collectif Horizon 360</div>
+
+      <p>Le groupe Varenne conteste toute implication dans des violences et indique coopérer avec les autorités compétentes. L’ONG appelle à la publication des contrats, à un audit indépendant des prestataires et à des mécanismes de vigilance renforcés.</p>
+
+      <!-- ✅ Meta block moved HERE (above donation) -->
+      <div class="endMeta" aria-label="Métadonnées">
+        <div class="endMetaLine">Rubrique : Enquêtes</div>
+        <div class="endMetaLine">Temps de lecture estimé : 5 min</div>
+        <div class="endMetaLine">Mots-clés : sous-traitance, vigilance, flux financiers, sécurité privée</div>
+        <div class="endMetaLine">Référence interne : CH360-ENQ-2026-0108</div>
+      </div>
+
+      <div class="donation">
+        <strong>Soutenir nos enquêtes</strong>
+        <div class="fakeInput">Votre email</div>
+        <div class="fakeInput">Montant du don</div>
+        <div class="fakeInput">Méthode de paiement</div>
+      </div>
+
+      <div style="height:18px;"></div>
+    </div>
+  </div>
+
+</div>
+
+<div class="safariBottom">
+  <div id="backBtn" class="bbtn">‹</div>
+  <div class="homePill"></div>
+  <div id="forwardBtn" class="bbtn">›</div>
+</div>
+
+<script>
+const ORG_QUERY = "Collectif Horizon 360";
+const URL_HOME  = "https://www.collectif-horizon360.com";
+const URL_ART   = "https://www.collectif-horizon360.com/enquetes/affaire-varenne";
+
+const addr = document.getElementById("addr");
+const addrPill = document.getElementById("addrPill");
+const loader = document.getElementById("loader");
+
+const pageSearch  = document.getElementById("pageSearch");
+const pageHome    = document.getElementById("pageHome");
+const pageArticle = document.getElementById("pageArticle");
+
+const backBtn = document.getElementById("backBtn");
+const forwardBtn = document.getElementById("forwardBtn");
+const moreAction = document.getElementById("moreAction");
+
+const suggestWrap = document.getElementById("suggestWrap");
+const suggestItem = document.getElementById("suggestItem");
+
+const articleHero = document.getElementById("articleHero");
+articleHero.style.backgroundImage = "url('hero-varenne.jpg')";
+
+let historyStack = ["search"];
+let historyIndex = 0;
+
+function updateNav(){
+  backBtn.classList.toggle("disabled", historyIndex === 0);
+  forwardBtn.classList.toggle("disabled", historyIndex >= historyStack.length - 1);
+}
+
+function showLoader(){
+  loader.style.width = "0%";
+  setTimeout(()=> loader.style.width="32%", 60);
+  setTimeout(()=> loader.style.width="63%", 190);
+  setTimeout(()=> loader.style.width="86%", 360);
+  setTimeout(()=> loader.style.width="100%", 520);
+  setTimeout(()=> loader.style.width="0%", 820);
+}
+
+function setAddressForState(state){
+  if(state === "home") addr.value = URL_HOME;
+  else if(state === "article") addr.value = URL_ART;
+  else addr.value = "";
+}
+
+function showSuggestion(show){
+  suggestWrap.classList.toggle("show", !!show);
+}
+
+function navigate(state){
+  showLoader();
+  showSuggestion(false);
+
+  setTimeout(()=>{
+    pageSearch.classList.add("hidden");
+    pageHome.classList.add("hidden");
+    pageArticle.classList.add("hidden");
+
+    if(state==="search") pageSearch.classList.remove("hidden");
+    if(state==="home") pageHome.classList.remove("hidden");
+    if(state==="article") pageArticle.classList.remove("hidden");
+
+    setAddressForState(state);
+    if(state==="search") resetTyping();
+  }, 260);
+}
+
+function push(state){
+  historyStack = historyStack.slice(0, historyIndex + 1);
+  historyStack.push(state);
+  historyIndex++;
+  updateNav();
+}
+
+function currentState(){ return historyStack[historyIndex]; }
+
+function goBack(){
+  if(historyIndex === 0) return;
+  historyIndex--;
+  navigate(historyStack[historyIndex]);
+  updateNav();
+}
+
+function goForward(){
+  if(historyIndex >= historyStack.length - 1) return;
+  historyIndex++;
+  navigate(historyStack[historyIndex]);
+  updateNav();
+}
+
+backBtn.addEventListener("click", goBack);
+forwardBtn.addEventListener("click", goForward);
+
+addr.addEventListener("focus", ()=>{
+  addrPill.classList.add("focused");
+  if(currentState()==="search"){
+    setTimeout(()=>addr.select(), 20);
+  }
+});
+addr.addEventListener("blur", ()=>addrPill.classList.remove("focused"));
+
+document.addEventListener("pointerdown", (e)=>{
+  const inside = suggestWrap.contains(e.target) || addrPill.contains(e.target);
+  if(!inside) showSuggestion(false);
+});
+pageSearch.addEventListener("scroll", ()=>showSuggestion(false));
+
+let typingIndex = 0;
+function resetTyping(){
+  typingIndex = 0;
+  addr.value = "";
+  showSuggestion(false);
+}
+
+function typeNatural(){
+  const step = (Math.random() > 0.72) ? 2 : 1;
+  typingIndex = Math.min(typingIndex + step, ORG_QUERY.length);
+  addr.value = ORG_QUERY.slice(0, typingIndex);
+  if(typingIndex >= 4) showSuggestion(true);
+}
+
+addr.addEventListener("keydown", (e)=>{
+  const state = currentState();
+
+  if(e.key === "Enter"){
+    e.preventDefault();
+    openHome();
+    addr.blur();
+    return;
+  }
+  if(e.key === "Backspace" || e.key === "Delete"){
+    e.preventDefault();
+    return;
+  }
+  if(state !== "search"){
+    e.preventDefault();
+    return;
+  }
+
+  e.preventDefault();
+  const pause = (Math.random() > 0.82) ? 90 : 0;
+  setTimeout(typeNatural, pause);
+});
+
+suggestItem.addEventListener("click", ()=>{
+  openHome();
+  addr.blur();
+});
+
+moreAction.addEventListener("click", ()=>{
+  if(currentState() === "search"){
+    openHome();
+    addr.blur();
+  }
+});
+
+function openHome(){
+  navigate("home");
+  push("home");
+}
+
+function openArticle(){
+  navigate("article");
+  push("article");
+  setTimeout(()=>{ pageArticle.scrollTo({top:0}); }, 350);
+}
+
+updateNav();
+setAddressForState("search");
+resetTyping();
+</script>
+
+</body>
+</html>
